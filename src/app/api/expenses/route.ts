@@ -1,79 +1,92 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { getDateRange } from '@/lib/utils'
 
-export async function GET(request: NextRequest) {
+// GET - Fetch specific expense
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
-    const { searchParams } = new URL(request.url)
-    const period = searchParams.get('period') as 'daily' | 'weekly' | 'monthly' || 'monthly'
-    const date = searchParams.get('date') ? new Date(searchParams.get('date')!) : new Date()
-
-    const { start, end } = getDateRange(period, date)
-
-    const expenses = await prisma.expense.findMany({
-      where: {
-        date: {
-          gte: start,
-          lte: end,
-        },
-      },
+    const { id } = await params
+    
+    const expense = await prisma.expense.findUnique({
+      where: { id },
       include: {
         category: true,
         fundingSource: true
-      },
-      orderBy: {
-        date: 'desc',
-      },
+      }
     })
-
-    const totalExpenses = expenses.reduce((sum: number, expense: { amount: number }) => sum + expense.amount, 0)
-
-    return NextResponse.json({
-      expenses,
-      totalExpenses,
-      period,
-      dateRange: { start, end },
-    })
+    
+    if (!expense) {
+      return NextResponse.json(
+        { error: 'Expense not found' },
+        { status: 404 }
+      )
+    }
+    
+    return NextResponse.json(expense)
   } catch (error) {
-    console.error('Error fetching expenses:', error)
+    console.error('Error fetching expense:', error)
     return NextResponse.json(
-      { error: 'Failed to fetch expenses' },
+      { error: 'Failed to fetch expense' },
       { status: 500 }
     )
   }
 }
 
-export async function POST(request: NextRequest) {
+// PATCH - Update an expense
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
+    const { id } = await params
     const body = await request.json()
+    
     const { amount, description, categoryId, fundingSourceId, date } = body
-
-    if (!amount || !description || !categoryId) {
-      return NextResponse.json(
-        { error: 'Missing required fields' },
-        { status: 400 }
-      )
-    }
-
-    const expense = await prisma.expense.create({
+    
+    const expense = await prisma.expense.update({
+      where: { id },
       data: {
-        amount: parseFloat(amount),
+        amount: amount ? parseFloat(amount) : undefined,
         description,
         categoryId,
         fundingSourceId: fundingSourceId || null,
-        date: date ? new Date(date) : new Date(),
+        date: date ? new Date(date) : undefined
       },
       include: {
         category: true,
         fundingSource: true
-      },
+      }
     })
-
-    return NextResponse.json(expense, { status: 201 })
+    
+    return NextResponse.json(expense)
   } catch (error) {
-    console.error('Error creating expense:', error)
+    console.error('Error updating expense:', error)
     return NextResponse.json(
-      { error: 'Failed to create expense' },
+      { error: 'Failed to update expense' },
+      { status: 500 }
+    )
+  }
+}
+
+// DELETE - Delete an expense
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params
+    
+    await prisma.expense.delete({
+      where: { id }
+    })
+    
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error('Error deleting expense:', error)
+    return NextResponse.json(
+      { error: 'Failed to delete expense' },
       { status: 500 }
     )
   }
