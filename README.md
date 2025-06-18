@@ -106,26 +106,6 @@ Aplikasi web modern untuk mengelola pengeluaran pribadi dengan antarmuka mobile-
 - Klik ikon gear di header
 - Logout dari aplikasi
 
-## 🚀 Deployment (Vercel)
 
-1. **Push ke Git repository**
-
-2. **Deploy ke Vercel**
-   - Import project di Vercel
-   - Set environment variables
-   - Deploy
-
-3. **Environment Variables untuk Production**
-   ```env
-   DATABASE_URL="postgresql://..."
-   NEXTAUTH_SECRET="production-secret-key"
-   NEXTAUTH_URL="https://your-domain.vercel.app"
-   ```
-
-4. **Setup PostgreSQL Production**
-   - Gunakan service seperti Supabase, Neon, atau PlanetScale
-   - Update DATABASE_URL di Vercel
-
----
 
 **Happy tracking! 💰📊**
