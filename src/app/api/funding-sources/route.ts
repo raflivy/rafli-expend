@@ -1,71 +1,84 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
-// GET - Fetch all funding sources
-export async function GET() {
+// GET - Fetch specific funding source
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
-    const fundingSources = await prisma.fundingSource.findMany({
-      orderBy: { name: 'asc' }
+    const { id } = await params
+    
+    const fundingSource = await prisma.fundingSource.findUnique({
+      where: { id }
     })
     
-    return NextResponse.json(fundingSources)
+    if (!fundingSource) {
+      return NextResponse.json(
+        { error: 'Funding source not found' },
+        { status: 404 }
+      )
+    }
+    
+    return NextResponse.json(fundingSource)
   } catch (error) {
-    console.error('Error fetching funding sources:', error)
+    console.error('Error fetching funding source:', error)
     return NextResponse.json(
-      { error: 'Failed to fetch funding sources' },
+      { error: 'Failed to fetch funding source' },
       { status: 500 }
     )
   }
 }
 
-// POST - Create a new funding source
-export async function POST(request: NextRequest) {
+// PATCH - Update a funding source
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
+    const { id } = await params
     const body = await request.json()
+    
     const { name, type, balance, icon } = body
     
-    if (!name || !type) {
-      return NextResponse.json(
-        { error: 'Name and type are required' },
-        { status: 400 }
-      )
-    }
-    
-    const fundingSource = await prisma.fundingSource.create({
+    const fundingSource = await prisma.fundingSource.update({
+      where: { id },
       data: {
         name,
         type,
-        balance: balance || 0,
-        icon: icon || getDefaultIcon(type)
+        balance,
+        icon
       }
     })
     
-    return NextResponse.json(fundingSource, { status: 201 })  } catch (error: unknown) {
-    console.error('Error creating funding source:', error)
-    
-    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2002') {
-      return NextResponse.json(
-        { error: 'Funding source with this name already exists' },
-        { status: 409 }
-      )
-    }
-    
+    return NextResponse.json(fundingSource)
+  } catch (error) {
+    console.error('Error updating funding source:', error)
     return NextResponse.json(
-      { error: 'Failed to create funding source' },
+      { error: 'Failed to update funding source' },
       { status: 500 }
     )
   }
 }
 
-function getDefaultIcon(type: string): string {
-  switch (type) {
-    case 'bank':
-      return '🏦'
-    case 'cash':
-      return '💵'
-    case 'credit':
-      return '💳'
-    default:
-      return '💰'
+// DELETE - Delete a funding source
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params
+    
+    await prisma.fundingSource.delete({
+      where: { id }
+    })
+    
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error('Error deleting funding source:', error)
+    return NextResponse.json(
+      { error: 'Failed to delete funding source' },
+      { status: 500 }
+    )
   }
 }
