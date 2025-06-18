@@ -1,0 +1,66 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Category {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  color     String   @default("#3B82F6")
+  icon      String   @default("Tag")
+  budget    Float    @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  expenses  Expense[]
+
+  @@map("categories")
+}
+
+model FundingSource {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  type      String    @default("cash") // cash, credit, debit, digital
+  balance   Float     @default(0)
+  icon      String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  expenses  Expense[]
+
+  @@map("funding_sources")
+}
+
+model Expense {
+  id              String        @id @default(cuid())
+  amount          Float
+  description     String
+  date            DateTime      @default(now())
+  categoryId      String
+  category        Category      @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  fundingSourceId String?
+  fundingSource   FundingSource? @relation(fields: [fundingSourceId], references: [id])
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@map("expenses")
+}
+
+model AppSettings {
+  id                String   @id @default(cuid())
+  passwordHash      String
+  monthlyBudget     Float    @default(0)
+  currency          String   @default("IDR")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@map("app_settings")
+}
