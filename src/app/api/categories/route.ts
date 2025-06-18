@@ -1,9 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
-export async function GET() {
+// GET - Fetch specific category
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
-    const categories = await prisma.category.findMany({
+    const { id } = await params
+    
+    const category = await prisma.category.findUnique({
+      where: { id },
       include: {
         _count: {
           select: {
@@ -11,47 +18,232 @@ export async function GET() {
           },
         },
       },
-      orderBy: {
-        name: 'asc',
-      },
     })
-
-    return NextResponse.json(categories)
-  } catch (error) {
-    console.error('Error fetching categories:', error)
+    
+    if (!category) {
+      return NextResponse.json(
+        { error: 'Category not found' },
+        { status: 404 }
+      )
+    }
+    
+    return NextResponse.json(category)  } catch (error) {
+    console.error('Error fetching category:', error)
     return NextResponse.json(
-      { error: 'Failed to fetch categories' },
+      { error: 'Failed to fetch category' },
       { status: 500 }
     )
   }
 }
 
-export async function POST(request: NextRequest) {
+// PATCH - Update a category
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
+    const { id } = await params
     const body = await request.json()
+    
     const { name, color, icon, budget } = body
-
-    if (!name) {
-      return NextResponse.json(
-        { error: 'Category name is required' },
-        { status: 400 }
-      )
-    }
-
-    const category = await prisma.category.create({
+    
+    const category = await prisma.category.update({
+      where: { id },
       data: {
         name,
-        color: color || '#3B82F6',
-        icon: icon || 'Tag',
+        color,
+        icon,
         budget: budget ? parseFloat(budget) : 0,
       },
     })
-
-    return NextResponse.json(category, { status: 201 })
-  } catch (error) {
-    console.error('Error creating category:', error)
+    
+    return NextResponse.json(category)  } catch (error: unknown) {
+    console.error('Error updating category:', error)
+    
+    if (error && typeof error === 'object' && 'code' in error) {
+      if (error.code === 'P2002') {
+        return NextResponse.json(
+          { error: 'Category with this name already exists' },
+          { status: 409 }
+        )
+      }
+      if (error.code === 'P2025') {
+        return NextResponse.json(
+          { error: 'Category not found' },
+          { status: 404 }
+        )
+      }
+    }
+    
     return NextResponse.json(
-      { error: 'Failed to create category' },
+      { error: 'Failed to update category' },
+      { status: 500 }
+    )
+  }
+}
+
+// DELETE - Delete a category
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params
+    
+    // Check if category has expenses
+    const expenseCount = await prisma.expense.count({
+      where: { categoryId: id },
+    })
+    
+    if (expenseCount > 0) {
+      return NextResponse.json(
+        { error: 'Cannot delete category with existing expenses' },
+        { status: 400 }
+      )
+    }
+    
+    await prisma.category.delete({
+      where: { id },
+    })
+    
+    return NextResponse.json({ message: 'Category deleted successfully' })
+  } catch (error: unknown) {
+    console.error('Error deleting category:', error)
+    
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2025') {
+      return NextResponse.json(
+        { error: 'Category not found' },
+        { status: 404 }
+      )
+    }
+    
+    return NextResponse.json(
+      { error: 'Failed to delete category' },
+      { status: 500 }
+    )
+  }
+}
+import { NextRequest, NextResponse } from 'next/server'
+import { prisma } from '@/lib/prisma'
+
+// GET - Fetch specific category
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params
+    
+    const category = await prisma.category.findUnique({
+      where: { id },
+      include: {
+        _count: {
+          select: {
+            expenses: true,
+          },
+        },
+      },
+    })
+    
+    if (!category) {
+      return NextResponse.json(
+        { error: 'Category not found' },
+        { status: 404 }
+      )
+    }
+    
+    return NextResponse.json(category)  } catch (error) {
+    console.error('Error fetching category:', error)
+    return NextResponse.json(
+      { error: 'Failed to fetch category' },
+      { status: 500 }
+    )
+  }
+}
+
+// PATCH - Update a category
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params
+    const body = await request.json()
+    
+    const { name, color, icon, budget } = body
+    
+    const category = await prisma.category.update({
+      where: { id },
+      data: {
+        name,
+        color,
+        icon,
+        budget: budget ? parseFloat(budget) : 0,
+      },
+    })
+    
+    return NextResponse.json(category)  } catch (error: unknown) {
+    console.error('Error updating category:', error)
+    
+    if (error && typeof error === 'object' && 'code' in error) {
+      if (error.code === 'P2002') {
+        return NextResponse.json(
+          { error: 'Category with this name already exists' },
+          { status: 409 }
+        )
+      }
+      if (error.code === 'P2025') {
+        return NextResponse.json(
+          { error: 'Category not found' },
+          { status: 404 }
+        )
+      }
+    }
+    
+    return NextResponse.json(
+      { error: 'Failed to update category' },
+      { status: 500 }
+    )
+  }
+}
+
+// DELETE - Delete a category
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params
+    
+    // Check if category has expenses
+    const expenseCount = await prisma.expense.count({
+      where: { categoryId: id },
+    })
+    
+    if (expenseCount > 0) {
+      return NextResponse.json(
+        { error: 'Cannot delete category with existing expenses' },
+        { status: 400 }
+      )
+    }
+    
+    await prisma.category.delete({
+      where: { id },
+    })
+    
+    return NextResponse.json({ message: 'Category deleted successfully' })
+  } catch (error: unknown) {
+    console.error('Error deleting category:', error)
+    
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2025') {
+      return NextResponse.json(
+        { error: 'Category not found' },
+        { status: 404 }
+      )
+    }
+    
+    return NextResponse.json(
+      { error: 'Failed to delete category' },
       { status: 500 }
     )
   }
