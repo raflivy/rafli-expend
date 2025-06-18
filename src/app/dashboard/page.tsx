@@ -107,9 +107,8 @@ export default function Dashboard() {  const [stats, setStats] = useState<Dashbo
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl p-6 text-white"
-        >
-          <h2 className="text-lg font-semibold mb-2">Hi rafli, how's life!?</h2>
+          className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl p-6 text-white"        >
+          <h2 className="text-lg font-semibold mb-2">Hi rafli, how&apos;s life!?</h2>
           <p className="text-blue-100 text-sm">
             {new Date().toLocaleDateString('id-ID', { 
               weekday: 'long', 
